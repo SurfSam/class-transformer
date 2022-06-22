@@ -91,6 +91,12 @@ export class MetadataStorage {
     });
   }
 
+  findExposeMetadataByAlias(target: Function, name: string): ExposeMetadata {
+    return this.getExposedMetadatas(target).find(metadata => {
+      return metadata.options && metadata.options.alias && metadata.options.alias.includes(name);
+    });
+  }
+
   findTypeMetadata(target: Function, propertyName: string): TypeMetadata {
     return this.findMetadata(this._typeMetadatas, target, propertyName);
   }

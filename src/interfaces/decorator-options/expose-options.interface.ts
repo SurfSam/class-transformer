@@ -8,6 +8,11 @@ export interface ExposeOptions {
   name?: string;
 
   /**
+   * Alternative names of property on the target object to expose the value of this property.
+   */
+  alias?: string[];
+
+  /**
    * First version where this property should be exposed.
    *
    * Example:

@@ -175,9 +175,16 @@ export class TransformOperationExecutor {
         if (!this.options.ignoreDecorators && targetType) {
           if (this.transformationType === TransformationType.PLAIN_TO_CLASS) {
             const exposeMetadata = defaultMetadataStorage.findExposeMetadataByCustomName(targetType as Function, key);
+
             if (exposeMetadata) {
               propertyName = exposeMetadata.propertyName;
               newValueKey = exposeMetadata.propertyName;
+            } else {
+              const exposeMetadataAlias = defaultMetadataStorage.findExposeMetadataByAlias(targetType as Function, key);
+              if (exposeMetadataAlias && !newValue[exposeMetadataAlias.propertyName]) {
+                propertyName = exposeMetadataAlias.propertyName;
+                newValueKey = exposeMetadataAlias.propertyName;
+              }
             }
           } else if (
             this.transformationType === TransformationType.CLASS_TO_PLAIN ||
@@ -329,7 +336,7 @@ export class TransformOperationExecutor {
             if (subValue === undefined && this.options.exposeDefaultValues) {
               // Set default value if nothing provided
               finalValue = newValue[newValueKey];
-            } else {
+            } else if (subValue !== undefined) {
               finalValue = this.transform(subSource, subValue, type, arrayType, isSubValueMap, level + 1);
               finalValue = this.applyCustomTransformations(
                 finalValue,
@@ -341,7 +348,7 @@ export class TransformOperationExecutor {
             }
           }
 
-          if (finalValue !== undefined || this.options.exposeUnsetFields) {
+          if (finalValue !== undefined || (this.options.exposeUnsetFields && !newValue[newValueKey])) {
             if (newValue instanceof Map) {
               newValue.set(newValueKey, finalValue);
             } else {
@@ -460,15 +467,20 @@ export class TransformOperationExecutor {
       // add all exposed to list of keys
       let exposedProperties = defaultMetadataStorage.getExposedProperties(target, this.transformationType);
       if (this.transformationType === TransformationType.PLAIN_TO_CLASS) {
-        exposedProperties = exposedProperties.map(key => {
+        exposedProperties = exposedProperties.flatMap(key => {
           const exposeMetadata = defaultMetadataStorage.findExposeMetadata(target, key);
           if (exposeMetadata && exposeMetadata.options && exposeMetadata.options.name) {
+            if (exposeMetadata.options.alias) {
+              return [exposeMetadata.options.name, ...exposeMetadata.options.alias];
+            }
+
             return exposeMetadata.options.name;
           }
 
           return key;
         });
       }
+
       if (this.options.excludeExtraneousValues) {
         keys = exposedProperties;
       } else {
